@@ -1,0 +1,128 @@
+---
+title: "NoSQL Migration"
+author: Anil Akyildirim
+date: "10/19/2019"
+output:
+  html_document:
+    code_download: yes
+    code_folding: hide
+    highlight: pygments
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+
+# Introduction
+
+In this assignment, we will take flights database from MYSQL relational Database and migrate to NoSQL Neo4j database. As a conclusion, we will discuss the advantages and disadvantages of NoSQL Database.
+
+
+
+# Loading Libraries
+
+```{r}
+library(RMySQL)
+library(neo4r)
+```
+
+
+
+# Data Collection
+
+## MySQL Relational Database - nycflights13 database 
+
+```{r}
+
+user = 'root'
+password = 'GGanuil1'
+dbname = 'nycflights13'
+host = 'localhost'
+myDb <- dbConnect(MySQL(),user = user, password = password,  dbname = dbname, host = host)
+tables <- dbListTables(myDb)
+
+tables
+
+```
+
+We have currently planes and weather tables. 
+
+```{r}
+planes <- dbGetQuery(myDb, "select * from planes")
+weather <- dbGetQuery(myDb, "select * from weather")
+head(planes)
+head(weather)
+
+
+```
+
+# Data Export
+
+```{r}
+
+write.csv(planes, "planes.csv", row.names = TRUE, na="")
+# the exported and imported csv file is in https://raw.githubusercontent.com/anilak1978/nosql-migration/master/planes.csv url
+
+```
+
+
+
+## Neo4j Graph - database migration
+
+In order to work with Neo4J Graph , we have to install the desktop version, create a database(graph) under the My Project section.
+
+![](http://airlocked50.com/wp-content/uploads/2019/11/neo4j.jpg)
+
+We can further access to the database using package neo4j R package. We need to make sure to start the instance before we attempt to connect. 
+
+
+```{r}
+
+con <- neo4j_api$new(url = "http://localhost:7474", 
+                     user = "neo4j", password = "GGanuil1")
+
+con$ping() # to check if we can access the server by pinging it
+```
+
+200 is telling us that the connection was successful. 
+
+![](http://airlocked50.com/wp-content/uploads/2019/11/neo4j-2.jpg)
+
+
+```{r}
+
+on_load_query <- 'CREATE (n:Price) SET n = row,
+n.tailnum = toString(row.tailnum),
+n.year = toInteger(row.year),
+n.manufacturer = toString(row.manufacturer),
+n.model = toString(row.model),
+n.engines = toString(row.engines),
+n.seats = toString(row.seats),
+n.speed = toInteger(row.speed),
+n.engine = toString(row.engine);'
+# Send the csv 
+load_csv(url = "https://raw.githubusercontent.com/anilak1978/nosql-migration/master/planes-2.csv", 
+         con = con, header = TRUE, periodic_commit = 50, 
+         as = "row", on_load = on_load_query)
+
+
+```
+
+We can see that we were able to load the table and successfully migrated the data into our newly created graph (database). We can also see the data in the neo4j browser.
+
+![](http://airlocked50.com/wp-content/uploads/2019/11/neo4j-4.jpg)
+
+
+
+# Conclusion
+
+Based on this assignment, the advantages of neo4j nosql graph or database is that, we can create nodes and relationship across the database and tables. The disadvantage i see is that, there are not many r packages out there that will make the load and queriying easy. It does look agile as , easy to filter as my first impression. 
+
+
+
+
+
+
